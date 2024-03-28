@@ -67,6 +67,7 @@ class QuantAct(Module):
         """
         quantize given activation x
         """
+        #若 running_stat 为 True，则动态更新 self.x_min 和 self.x_max。
         if self.running_stat:
             x_min = x.data.min()
             x_max = x.data.max()
@@ -130,7 +131,7 @@ class Quant_Linear(Module):
 
 class Quant_Conv2d(Module):
     """
-    Class to quantize given convolutional layer weights
+    量化给定卷积层权重
     """
     def __init__(self, weight_bit, full_precision_flag=False):
         super(Quant_Conv2d, self).__init__()

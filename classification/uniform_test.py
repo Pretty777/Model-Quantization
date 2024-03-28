@@ -22,6 +22,7 @@ import argparse
 import torch
 import numpy as np
 import torch.nn as nn
+from classification.utils.quantize_model import quantize_model
 from pytorchcv.model_provider import get_model as ptcv_get_model
 from utils import *
 from distill_data import *
@@ -59,19 +60,21 @@ def arg_parse():
 
 if __name__ == '__main__':
     args = arg_parse()
+    # 设置PyTorch使用的cuDNN库为非确定性模式，这通常能加速训练，但会牺牲结果的可重复性
     torch.backends.cudnn.deterministic = False
+    # 允许cuDNN自动寻找最适合当前配置的高效算法，进一步加速计算
     torch.backends.cudnn.benchmark = True
 
-    # Load pretrained model
+    # 加载预训练全精度模型
     model = ptcv_get_model(args.model, pretrained=True)
     print('****** Full precision model loaded ******')
 
-    # Load validation data
+    # 加载验证数据集
     test_loader = getTestData(args.dataset,
                               batch_size=args.test_batch_size,
                               path='./data/imagenet/',
                               for_inception=args.model.startswith('inception'))
-    # Generate distilled data
+    # 生成蒸馏数据，为了模拟原始数据分布的合成数据，用于量化过程中的校准
     dataloader = getDistilData(
         model.cuda(),
         args.dataset,
@@ -79,19 +82,20 @@ if __name__ == '__main__':
         for_inception=args.model.startswith('inception'))
     print('****** Data loaded ******')
 
-    # Quantize single-precision model to 8-bit model
+    # 将单精度模型量化为8位模型，具体量化方法在quantize_model中实现
     quantized_model = quantize_model(model)
-    # Freeze BatchNorm statistics
+    # 冻结BatchNorm层的统计信息，因为量化过程中不希望这些统计信息发生变化
     quantized_model.eval()
     quantized_model = quantized_model.cuda()
 
-    # Update activation range according to distilled data
+    # 使用蒸馏数据更新量化模型的激活范围
     update(quantized_model, dataloader)
     print('****** Zero Shot Quantization Finished ******')
 
-    # Freeze activation range during test
+    # 冻结激活范围
     freeze_model(quantized_model)
+    # 数据并行，加速推理过程
     quantized_model = nn.DataParallel(quantized_model).cuda()
 
-    # Test the final quantized model
+    # 测试最终量化后的模型
     test(quantized_model, test_loader)

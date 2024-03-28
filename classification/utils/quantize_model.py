@@ -28,11 +28,12 @@ from pytorchcv.models.shufflenetv2 import ShuffleUnit, ShuffleInitBlock
 
 def quantize_model(model):
     """
-    Recursively quantize a pretrained single-precision model to int8 quantized model
-    model: pretrained single-precision model
+    总结：递归量化预训练的单精度模型为int8量化模型。
+    参数model: 预训练的单精度模型。
     """
 
-    # quantize convolutional and linear layers to 8-bit
+    # Conv2d卷积层的量化和全连接层的量化
+    #TODO: 分别调用了Quant_Conv2d和Quant_Linear
     if type(model) == nn.Conv2d:
         quant_mod = Quant_Conv2d(weight_bit=8)
         quant_mod.set_param(model)
@@ -42,21 +43,29 @@ def quantize_model(model):
         quant_mod.set_param(model)
         return quant_mod
 
-    # quantize all the activation to 8-bit
+    # 如果模型是激活层，把激活值量化为8位
+    # TODO: 调用了QuantAct(activation_bit=8)
     elif type(model) == nn.ReLU or type(model) == nn.ReLU6:
         return nn.Sequential(*[model, QuantAct(activation_bit=8)])
 
-    # recursively use the quantized module to replace the single-precision module
+    # 如果模型是一个Sequential，递归地对每个子模块应用量化 
     elif type(model) == nn.Sequential:
         mods = []
         for n, m in model.named_children():
             mods.append(quantize_model(m))
         return nn.Sequential(*mods)
+    # 对于其他类型的模块，深拷贝模型，并递归地替换其子模块为量化模块
     else:
+        # 深拷贝创建模型的一个完整副本，确保原始模型不被修改
+        # 原始模型的结构和参数不会因为量化过程而改变
         q_model = copy.deepcopy(model)
+        # 遍历模型的所有属性
         for attr in dir(model):
+            # 获取属性对应的值或模块
             mod = getattr(model, attr)
+            # 检查属性是否为nn.Module的实例，属性名不包含'norm'，以避免对标准化层进行量化
             if isinstance(mod, nn.Module) and 'norm' not in attr:
+                # 更新q_model中名为attr的子模块，将原始版本替换为量化子模块后的版本
                 setattr(q_model, attr, quantize_model(mod))
         return q_model
 
