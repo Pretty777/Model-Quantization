@@ -135,9 +135,9 @@ class Quant_Conv2d(Module):
     """
     def __init__(self, weight_bit, full_precision_flag=False):
         super(Quant_Conv2d, self).__init__()
-        self.full_precision_flag = full_precision_flag
-        self.weight_bit = weight_bit
-        self.weight_function = AsymmetricQuantFunction.apply
+        self.full_precision_flag = full_precision_flag # 是否使用全精度
+        self.weight_bit = weight_bit # 权重量化位数
+        self.weight_function = AsymmetricQuantFunction.apply # TODO:权重量化函数
 
     def __repr__(self):
         s = super(Quant_Conv2d, self).__repr__()
