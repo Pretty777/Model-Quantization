@@ -85,7 +85,7 @@ class QuantAct(Module):
 
 class Quant_Linear(Module):
     """
-    Class to quantize given linear layer weights
+    量化给定线性层的权重
     """
     def __init__(self, weight_bit, full_precision_flag=False):
         """
@@ -140,12 +140,14 @@ class Quant_Conv2d(Module):
         self.weight_function = AsymmetricQuantFunction.apply # TODO:权重量化函数
 
     def __repr__(self):
+        # 描述Quant_Conv2d对象的状态，包括量化位宽和是否全精度
         s = super(Quant_Conv2d, self).__repr__()
         s = "(" + s + " weight_bit={}, full_precision_flag={})".format(
             self.weight_bit, self.full_precision_flag)
         return s
 
     def set_param(self, conv):
+        # 从传入的卷积层conv复制相关的配置和参数到量化模块
         self.in_channels = conv.in_channels
         self.out_channels = conv.out_channels
         self.kernel_size = conv.kernel_size
@@ -153,25 +155,31 @@ class Quant_Conv2d(Module):
         self.padding = conv.padding
         self.dilation = conv.dilation
         self.groups = conv.groups
-        self.weight = Parameter(conv.weight.data.clone())
+        self.weight = Parameter(conv.weight.data.clone())# 权重
+        # 这个地方使用了Tensor的深拷贝，意味着生成了一个完全独立的副本
+        # 从卷积层复制权重和偏移，不希望量化过程对原始卷积层参数有任何修改
         try:
-            self.bias = Parameter(conv.bias.data.clone())
+            self.bias = Parameter(conv.bias.data.clone())# 偏移，如果有的话
         except AttributeError:
             self.bias = None
 
     def forward(self, x):
+        # 使用量化权重进行前向传播
         """
         using quantized weights to forward activation x
         """
-        w = self.weight
+        w = self.weight # 获取原始或量化后的权重
+        # 将权重展平，计算最小值和最大值，确定量化参数
         x_transform = w.data.contiguous().view(self.out_channels, -1)
         w_min = x_transform.min(dim=1).values
         w_max = x_transform.max(dim=1).values
+        # 根据flag判断是否进行量化
+        # TODO: weight_function(self.weight, self.weight_bit, w_min, w_max)量化权重
         if not self.full_precision_flag:
             w = self.weight_function(self.weight, self.weight_bit, w_min,
                                      w_max)
         else:
             w = self.weight
-
+        # 
         return F.conv2d(x, w, self.bias, self.stride, self.padding,
                         self.dilation, self.groups)
