@@ -105,6 +105,7 @@ class Quant_Linear(Module):
         return s
 
     def set_param(self, linear):
+        # 从全连接层复制参数和配置
         self.in_features = linear.in_features
         self.out_features = linear.out_features
         self.weight = Parameter(linear.weight.data.clone())
@@ -115,7 +116,7 @@ class Quant_Linear(Module):
 
     def forward(self, x):
         """
-        using quantized weights to forward activation x
+        使用量化参数获取前向传播激活值x
         """
         w = self.weight
         x_transform = w.data.detach()
@@ -126,6 +127,7 @@ class Quant_Linear(Module):
                                      w_max)
         else:
             w = self.weight
+        # 使用量化或原始的权重进行线性变换
         return F.linear(x, weight=w, bias=self.bias)
 
 
@@ -175,6 +177,9 @@ class Quant_Conv2d(Module):
         w_max = x_transform.max(dim=1).values
         # 根据flag判断是否进行量化
         # TODO: weight_function(self.weight, self.weight_bit, w_min, w_max)量化权重
+        # From: AsymmetricQuantFunction.apply # TODO:权重量化函数
+        # Pytorch中Function类的.apply方法在内部会调用定义在Function子类中的forward方法，并在需要时调用backward方法来计算梯度。
+        # 所以需要看这个子类中的forward函数
         if not self.full_precision_flag:
             w = self.weight_function(self.weight, self.weight_bit, w_min,
                                      w_max)

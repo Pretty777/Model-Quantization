@@ -33,11 +33,12 @@ def quantize_model(model):
     """
 
     # Conv2d卷积层的量化和全连接层的量化
-    #TODO: 分别调用了Quant_Conv2d和Quant_Linear
+    #TODO: 调用了Quant_Conv2d（Finished，in quant_modules.py）
     if type(model) == nn.Conv2d:
         quant_mod = Quant_Conv2d(weight_bit=8)
         quant_mod.set_param(model)
         return quant_mod
+    #TODO: 调用了Quant_Linear
     elif type(model) == nn.Linear:
         quant_mod = Quant_Linear(weight_bit=8)
         quant_mod.set_param(model)
