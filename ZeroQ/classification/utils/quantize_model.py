@@ -33,19 +33,19 @@ def quantize_model(model):
     """
 
     # Conv2d卷积层的量化和全连接层的量化
-    #TODO: 调用了Quant_Conv2d（Finished，in quant_modules.py）
+    # TODO: 调用了Quant_Conv2d（quant_modules.py）[Finished]
     if type(model) == nn.Conv2d:
         quant_mod = Quant_Conv2d(weight_bit=8)
         quant_mod.set_param(model)
         return quant_mod
-    #TODO: 调用了Quant_Linear
+    # TODO: 调用了Quant_Linear（quant_modules.py）[Finished]
     elif type(model) == nn.Linear:
         quant_mod = Quant_Linear(weight_bit=8)
         quant_mod.set_param(model)
         return quant_mod
 
     # 如果模型是激活层，把激活值量化为8位
-    # TODO: 调用了QuantAct(activation_bit=8)
+    # TODO: 调用了QuantAct(activation_bit=8)（quant_modules.py）[Ongoing]
     elif type(model) == nn.ReLU or type(model) == nn.ReLU6:
         return nn.Sequential(*[model, QuantAct(activation_bit=8)])
 

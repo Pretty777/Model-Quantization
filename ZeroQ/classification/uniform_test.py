@@ -22,6 +22,7 @@ import argparse
 import torch
 import numpy as np
 import torch.nn as nn
+from ZeroQ.classification.utils.train_utils import update
 from classification.utils.quantize_model import quantize_model
 from pytorchcv.model_provider import get_model as ptcv_get_model
 from utils import *
